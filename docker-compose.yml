@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+  redmine:
+    image: redmine:latest
+    container_name: ${APP_CONTAINER_NAME}
+    restart: always
+    volumes:
+      - ./redmine/plugins:/usr/src/redmine/plugins
+      - ./redmine/themes:/usr/src/redmine/public/themes
+      - ./redmine/config/configuration.yml:/usr/src/redmine/config/configuration.yml
+      - ./redmine/files:/usr/src/redmine/files
+    networks:
+      web_net:
+        ipv4_address: ${APP_IP4_ADDR}
+    expose:
+      - ${APP_DOCKER_PORT}
+    ports:
+      - ${APP_DOCKER_PORT}:${REDMINE_DOCKER_PORT}
+    env_file:
+      - .env
+    environment:
+      - REDMINE_DB_POSTGRES=reddb
+      - REDMINE_DB_DATABASE=${DB_NAME}
+      - REDMINE_DB_USERNAME=${DB_USER}
+      - REDMINE_DB_PASSWORD=${DB_PASSWORD}
+      - TZ=${DB_TZ}
+    depends_on:
+      - reddb
+  reddb:
+    image: postgres:latest
+    container_name: ${DB_CONTAINER_NAME}
+    restart: always
+    volumes:
+      - ./db/initdb:/docker-entrypoint-initdb.d
+      - ./db/dbdata:/var/lib/postgresql/data
+    networks:
+      web_net:
+        ipv4_address: ${DB_IP4_ADDR}
+    expose:
+      - ${DB_DOCKER_PORT}
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - TZ=${DB_TZ}
+    command: --port=${DB_DOCKER_PORT}
+networks:
+  web_net:
+    name: web_net
+    driver: bridge
+    ipam:
+     driver: default
+     config:
+       - subnet: ${NET_SUBNET}
